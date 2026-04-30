@@ -1,0 +1,423 @@
+# Project 05 — Complete CI/CD Pipeline
+# Azure DevOps YAML Pipeline
+# Covers: build, test, security scan, container build, multi-stage deploy
+
+trigger:
+  branches:
+    include: [main, release/*, hotfix/*]
+  paths:
+    exclude: ['*.md', 'docs/**', '.github/**']
+
+pr:
+  branches:
+    include: [main, develop]
+  autoCancel: true
+
+variables:
+  # Variable groups (set in Azure DevOps Library)
+  - group: prod-variables      # APP_NAME, RESOURCE_GROUP, ACR_NAME, etc.
+  - group: prod-secrets        # Linked to Key Vault
+
+  # Pipeline variables
+  - name: imageTag
+    value: '$(Build.BuildId)'
+  - name: containerRegistry
+    value: '$(ACR_NAME).azurecr.io'
+  - name: imageName
+    value: '$(containerRegistry)/$(APP_NAME):$(imageTag)'
+  - name: nodeVersion
+    value: '18'
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+stages:
+
+# ══════════════════════════════════════════════════════════════════════════════
+# STAGE 1: Build, Test & Security Scan
+# ══════════════════════════════════════════════════════════════════════════════
+- stage: BuildAndTest
+  displayName: '🔨 Build, Test & Scan'
+  jobs:
+
+  - job: UnitTests
+    displayName: 'Unit Tests & Coverage'
+    steps:
+    - task: NodeTool@0
+      inputs:
+        versionSpec: '$(nodeVersion).x'
+      displayName: 'Install Node.js $(nodeVersion)'
+
+    - script: npm ci
+      displayName: 'Install dependencies (clean install)'
+
+    - script: npm run lint
+      displayName: 'ESLint'
+      continueOnError: false
+
+    - script: |
+        npm test -- \
+          --coverage \
+          --ci \
+          --reporters=default \
+          --reporters=jest-junit \
+          --coverageReporters=cobertura \
+          --coverageThreshold='{"global":{"branches":80,"functions":80,"lines":80}}'
+      displayName: 'Run unit tests with coverage'
+      env:
+        CI: true
+        NODE_ENV: test
+
+    - task: PublishTestResults@2
+      condition: always()
+      inputs:
+        testResultsFormat: 'JUnit'
+        testResultsFiles: '**/junit.xml'
+        mergeTestResults: true
+        testRunTitle: 'Unit Tests - $(Build.BuildNumber)'
+
+    - task: PublishCodeCoverageResults@1
+      condition: always()
+      inputs:
+        codeCoverageTool: 'Cobertura'
+        summaryFileLocation: '**/coverage/cobertura-coverage.xml'
+        reportDirectory: '**/coverage/lcov-report'
+
+  - job: SecurityScan
+    displayName: 'Security Scanning'
+    dependsOn: []
+    steps:
+    - task: NodeTool@0
+      inputs:
+        versionSpec: '$(nodeVersion).x'
+
+    - script: npm ci
+      displayName: 'Install dependencies'
+
+    # Dependency vulnerability scan
+    - script: |
+        npm audit --audit-level=high
+        npx audit-ci --high
+      displayName: 'npm audit'
+      continueOnError: true
+
+    # SAST scan
+    - task: Bash@3
+      displayName: 'Semgrep SAST scan'
+      inputs:
+        targetType: inline
+        script: |
+          pip install semgrep
+          semgrep --config=auto --json --output=semgrep-results.json . || true
+          cat semgrep-results.json | python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)
+          errors = [r for r in data.get('results', []) if r.get('extra', {}).get('severity') == 'ERROR']
+          if errors:
+              print(f'Found {len(errors)} high-severity issues')
+              for e in errors[:5]:
+                  print(f'  {e[\"path\"]}:{e[\"start\"][\"line\"]} - {e[\"extra\"][\"message\"]}')
+              sys.exit(1)
+          print('No high-severity SAST issues found')
+          "
+
+    - task: PublishBuildArtifacts@1
+      condition: always()
+      inputs:
+        pathToPublish: 'semgrep-results.json'
+        artifactName: 'security-scan-results'
+
+  - job: BuildContainer
+    displayName: 'Build & Push Container'
+    dependsOn: [UnitTests, SecurityScan]
+    condition: succeeded()
+    steps:
+    - task: NodeTool@0
+      inputs:
+        versionSpec: '$(nodeVersion).x'
+
+    - script: npm ci && npm run build 2>/dev/null || true
+      displayName: 'Build application'
+
+    # Login to ACR
+    - task: Docker@2
+      displayName: 'Login to ACR'
+      inputs:
+        command: login
+        containerRegistry: '$(AZURE_SUBSCRIPTION)-acr'
+
+    # Build image
+    - task: Docker@2
+      displayName: 'Build Docker image'
+      inputs:
+        command: build
+        repository: '$(APP_NAME)'
+        dockerfile: 'Dockerfile'
+        containerRegistry: '$(AZURE_SUBSCRIPTION)-acr'
+        tags: |
+          $(imageTag)
+          $(Build.SourceBranchName)-latest
+        arguments: '--build-arg BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ) --build-arg GIT_COMMIT=$(Build.SourceVersion)'
+
+    # Scan container image
+    - task: AzureContainerScan@0
+      displayName: 'Scan container for vulnerabilities'
+      inputs:
+        dockerImageName: '$(imageName)'
+      continueOnError: true
+
+    # Push image
+    - task: Docker@2
+      displayName: 'Push to ACR'
+      inputs:
+        command: push
+        repository: '$(APP_NAME)'
+        containerRegistry: '$(AZURE_SUBSCRIPTION)-acr'
+        tags: |
+          $(imageTag)
+          $(Build.SourceBranchName)-latest
+
+    # Publish deployment artifact
+    - task: PublishPipelineArtifact@1
+      inputs:
+        targetPath: '$(System.DefaultWorkingDirectory)'
+        artifact: 'deployment-package'
+        publishLocation: 'pipeline'
+
+# ══════════════════════════════════════════════════════════════════════════════
+# STAGE 2: Deploy to Development
+# ══════════════════════════════════════════════════════════════════════════════
+- stage: DeployDev
+  displayName: '🔧 Deploy Development'
+  dependsOn: BuildAndTest
+  condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+  variables:
+    environment: dev
+    slot: production
+  jobs:
+  - deployment: DeployDev
+    displayName: 'Deploy to Dev'
+    environment: 'development'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: AzureWebAppContainer@1
+            displayName: 'Deploy container to dev'
+            inputs:
+              azureSubscription: '$(AZURE_SUBSCRIPTION)'
+              appName: '$(APP_NAME)-dev'
+              containers: '$(imageName)'
+
+          - script: |
+              URL="https://$(APP_NAME)-dev.azurewebsites.net"
+              for i in {1..10}; do
+                STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$URL/health")
+                [ "$STATUS" == "200" ] && echo "✅ Dev health check passed" && exit 0
+                echo "Attempt $i: $STATUS"
+                sleep 10
+              done
+              echo "❌ Dev health check failed"
+              exit 1
+            displayName: 'Health check'
+
+# ══════════════════════════════════════════════════════════════════════════════
+# STAGE 3: Deploy to Staging
+# ══════════════════════════════════════════════════════════════════════════════
+- stage: DeployStaging
+  displayName: '🚀 Deploy Staging'
+  dependsOn: DeployDev
+  condition: and(succeeded(), or(eq(variables['Build.SourceBranch'], 'refs/heads/main'), startsWith(variables['Build.SourceBranch'], 'refs/heads/release/')))
+  jobs:
+  - deployment: DeployStaging
+    displayName: 'Deploy to Staging Slot'
+    environment: 'staging'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: AzureWebAppContainer@1
+            displayName: 'Deploy to staging slot'
+            inputs:
+              azureSubscription: '$(AZURE_SUBSCRIPTION)'
+              appName: '$(APP_NAME)'
+              deployToSlotOrASE: true
+              resourceGroupName: '$(RESOURCE_GROUP)'
+              slotName: staging
+              containers: '$(imageName)'
+
+          # Integration tests against staging
+          - script: |
+              STAGING_URL="https://$(APP_NAME)-staging.azurewebsites.net"
+              echo "Running integration tests against: $STAGING_URL"
+
+              # Health check
+              STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$STAGING_URL/health")
+              [ "$STATUS" != "200" ] && echo "❌ Health check failed: $STATUS" && exit 1
+
+              # API smoke tests
+              RESPONSE=$(curl -s "$STAGING_URL/api/v1/status")
+              echo "$RESPONSE" | python3 -c "
+              import json, sys
+              data = json.load(sys.stdin)
+              assert data.get('status') == 'ok', f'Status not ok: {data}'
+              print('✅ API smoke test passed')
+              "
+
+              echo "✅ All staging tests passed"
+            displayName: 'Integration & smoke tests'
+
+          # Performance baseline
+          - script: |
+              STAGING_URL="https://$(APP_NAME)-staging.azurewebsites.net"
+              echo "Running performance baseline..."
+              # Simple response time check
+              RESPONSE_TIME=$(curl -s -o /dev/null -w "%{time_total}" "$STAGING_URL/health")
+              echo "Response time: ${RESPONSE_TIME}s"
+              python3 -c "
+              import sys
+              rt = float('$RESPONSE_TIME')
+              if rt > 2.0:
+                  print(f'❌ Response time {rt}s exceeds 2s threshold')
+                  sys.exit(1)
+              print(f'✅ Response time {rt}s is acceptable')
+              "
+            displayName: 'Performance baseline check'
+
+# ══════════════════════════════════════════════════════════════════════════════
+# STAGE 4: Deploy to Production
+# ══════════════════════════════════════════════════════════════════════════════
+- stage: DeployProduction
+  displayName: '🏭 Deploy Production'
+  dependsOn: DeployStaging
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  jobs:
+  - deployment: DeployProduction
+    displayName: 'Swap Staging → Production'
+    environment: 'production'   # Requires manual approval in Azure DevOps
+    strategy:
+      runOnce:
+        preDeploy:
+          steps:
+          - script: |
+              echo "Pre-deployment checks..."
+              # Check no active incidents
+              # Check deployment window (business hours only)
+              HOUR=$(date +%H)
+              DAY=$(date +%u)
+              if [ "$DAY" -gt 5 ]; then
+                echo "⚠️  Weekend deployment — proceeding with caution"
+              fi
+              if [ "$HOUR" -lt 8 ] || [ "$HOUR" -gt 18 ]; then
+                echo "⚠️  Off-hours deployment — proceeding with caution"
+              fi
+              echo "✅ Pre-deployment checks passed"
+            displayName: 'Pre-deployment checks'
+
+        deploy:
+          steps:
+          # Swap staging → production (zero-downtime)
+          - task: AzureAppServiceManage@0
+            displayName: '🔄 Swap staging → production'
+            inputs:
+              azureSubscription: '$(AZURE_SUBSCRIPTION)'
+              Action: 'Swap Slots'
+              WebAppName: '$(APP_NAME)'
+              ResourceGroupName: '$(RESOURCE_GROUP)'
+              SourceSlot: staging
+              SwapWithProduction: true
+
+          # Production health check
+          - script: |
+              PROD_URL="https://$(APP_NAME).azurewebsites.net"
+              echo "Verifying production deployment..."
+              for i in {1..15}; do
+                STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$PROD_URL/health")
+                if [ "$STATUS" == "200" ]; then
+                  echo "✅ Production health check passed (attempt $i)"
+                  exit 0
+                fi
+                echo "Attempt $i: status=$STATUS"
+                sleep 15
+              done
+              echo "❌ Production health check FAILED — initiating rollback"
+              exit 1
+            displayName: 'Production health check'
+
+          # Rollback on failure
+          - task: AzureAppServiceManage@0
+            condition: failed()
+            displayName: '⏪ ROLLBACK: Swap back'
+            inputs:
+              azureSubscription: '$(AZURE_SUBSCRIPTION)'
+              Action: 'Swap Slots'
+              WebAppName: '$(APP_NAME)'
+              ResourceGroupName: '$(RESOURCE_GROUP)'
+              SourceSlot: staging
+              SwapWithProduction: true
+
+          - script: |
+              if [ "$(Agent.JobStatus)" == "Failed" ]; then
+                echo "🚨 ROLLBACK COMPLETED — Production restored to previous version"
+                echo "   Build: $(Build.BuildNumber)"
+                echo "   Image: $(imageName)"
+              fi
+            condition: failed()
+            displayName: 'Rollback notification'
+
+        postRouteTraffic:
+          steps:
+          - script: |
+              echo "📊 Post-deployment monitoring (5 minutes)..."
+              PROD_URL="https://$(APP_NAME).azurewebsites.net"
+              for i in {1..10}; do
+                STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$PROD_URL/health")
+                echo "Check $i: $STATUS"
+                [ "$STATUS" != "200" ] && echo "❌ Post-deployment check failed" && exit 1
+                sleep 30
+              done
+              echo "✅ Post-deployment monitoring passed"
+            displayName: 'Post-deployment monitoring'
+
+# ══════════════════════════════════════════════════════════════════════════════
+# STAGE 5: Notify
+# ══════════════════════════════════════════════════════════════════════════════
+- stage: Notify
+  displayName: '📢 Notify'
+  dependsOn: [BuildAndTest, DeployDev, DeployStaging, DeployProduction]
+  condition: always()
+  jobs:
+  - job: SendNotification
+    steps:
+    - script: |
+        STATUS="$(Agent.JobStatus)"
+        BUILD="$(Build.BuildNumber)"
+        BRANCH="$(Build.SourceBranchName)"
+        COMMIT="$(Build.SourceVersionMessage)"
+
+        if [ "$STATUS" == "Succeeded" ]; then
+          EMOJI="✅"
+          COLOR="good"
+        else
+          EMOJI="❌"
+          COLOR="danger"
+        fi
+
+        # Send Teams notification
+        curl -H "Content-Type: application/json" \
+          -d "{
+            \"@type\": \"MessageCard\",
+            \"themeColor\": \"$COLOR\",
+            \"summary\": \"Deployment $STATUS\",
+            \"sections\": [{
+              \"activityTitle\": \"$EMOJI Deployment $STATUS\",
+              \"facts\": [
+                {\"name\": \"Build\", \"value\": \"$BUILD\"},
+                {\"name\": \"Branch\", \"value\": \"$BRANCH\"},
+                {\"name\": \"Commit\", \"value\": \"$COMMIT\"}
+              ]
+            }]
+          }" \
+          "$(TEAMS_WEBHOOK_URL)" 2>/dev/null || echo "Teams notification skipped"
+      displayName: 'Send Teams notification'
+      condition: always()

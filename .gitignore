@@ -1,0 +1,19 @@
+# Environment
+.env
+*.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars
+
+# Azure CLI
+.azure/
+
+# Logs
+*.log

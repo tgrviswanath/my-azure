@@ -1,0 +1,25 @@
+// ARM Template: Web App + SQL Database + Key Vault + App Insights
+// Deploy: az deployment group create --resource-group $RG --template-file webapp-sql-arm.json --parameters appName=myapp sqlAdminPassword=MyPass123!
+//
+// NOTE: Rename to .json and remove these comment lines before deploying
+// ARM templates do not support comments in standard JSON
+//
+// Parameters:
+//   appName:           Application name (3-20 chars)
+//   environment:       dev | staging | prod
+//   location:          Azure region (default: resource group location)
+//   sqlAdminPassword:  SQL admin password (secure)
+//   appServiceSkuName: B1 | S1 | P1v3 etc.
+//
+// Resources created:
+//   - Log Analytics Workspace
+//   - Application Insights
+//   - Key Vault (RBAC-enabled)
+//   - Storage Account
+//   - SQL Server + Database
+//   - App Service Plan (Linux)
+//   - Web App (Node.js 18) with Managed Identity
+//   - RBAC: Web App → Key Vault Secrets User
+//
+// Outputs:
+//   webAppUrl, webAppName, sqlServerFqdn, keyVaultName, appInsightsConnectionString
