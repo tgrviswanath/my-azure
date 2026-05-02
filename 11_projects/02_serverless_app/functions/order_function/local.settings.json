@@ -1,0 +1,20 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "node",
+    "FUNCTIONS_NODE_BLOCK_ON_ENTRY_POINT_ERROR": "true",
+    "COSMOS_ENDPOINT": "https://cosmos-orders-dev.documents.azure.com:443/",
+    "COSMOS_DATABASE": "orders-db",
+    "COSMOS_CONNECTION": "AccountEndpoint=https://cosmos-orders-dev.documents.azure.com:443/;AccountKey=YOUR_KEY",
+    "SERVICE_BUS_NAMESPACE": "sbns-orders-dev.servicebus.windows.net",
+    "SERVICE_BUS_QUEUE": "orders",
+    "SERVICE_BUS_CONNECTION": "Endpoint=sb://sbns-orders-dev.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=YOUR_KEY",
+    "APPLICATIONINSIGHTS_CONNECTION_STRING": "InstrumentationKey=YOUR_KEY"
+  },
+  "Host": {
+    "LocalHttpPort": 7071,
+    "CORS": "*",
+    "CORSCredentials": false
+  }
+}
