@@ -1,0 +1,872 @@
+# Complete Updated Azure Hands-on Roadmap (Production-Oriented)
+
+This roadmap combines:
+
+* Cloud Engineering
+* DevOps
+* Data Engineering
+* Platform Engineering
+* Modern Azure practices
+
+using Microsoft Azure.
+
+This version includes:
+
+* cost awareness early
+* Terraform earlier
+* API authentication
+* local development
+* data engineering depth
+* observability
+* production debugging
+* security automation
+* modern DevOps practices
+
+---
+
+# STAGE 0 — Local Development Environment & Foundations
+
+Goal:
+Set up a real engineering workflow before touching Azure heavily.
+
+---
+
+# Project 0.1 — Local Cloud Development Setup
+
+## Tools
+
+* Docker
+* Docker Compose
+* Azurite
+* Azure CLI
+* Terraform
+* VS Code
+* Git
+
+## Learn
+
+* Local Azure emulation
+* Containerized development
+* Safe experimentation
+
+## Hands-on
+
+Run locally:
+
+```text
+Azure Functions
++ API Management
++ Cosmos DB Emulator
+```
+
+using:
+
+* Azurite
+* Cosmos DB Emulator
+* Azure Functions Core Tools
+
+---
+
+# Project 0.2 — Linux Foundations Lab
+
+## Learn
+
+* File system
+* SSH
+* Permissions
+* Processes
+* Services
+* Logs
+
+## Hands-on
+
+* Install Nginx
+* Configure users
+* Setup cron jobs
+* Analyze logs
+
+---
+
+# Project 0.3 — Git & GitHub Workflow
+
+## Learn
+
+* Branching
+* Pull requests
+* Merge conflicts
+* GitHub Actions basics
+
+---
+
+# Project 0.4 — Azure Cost & Billing Fundamentals
+
+## Services
+
+* Cost Management
+* Budgets
+* Azure Advisor
+* Alerts
+
+## Learn
+
+* Free tier limits
+* Budget alerts
+* Cost tagging
+* Cost estimation
+
+## Hands-on
+
+* Create budget alerts
+* Setup cost anomaly alerts
+* Monitor VM spending
+
+VERY IMPORTANT.
+
+---
+
+# STAGE 1 — Core Azure Foundations
+
+Goal:
+Learn core Azure services properly.
+
+---
+
+# Project 1.1 — Static Website Hosting
+
+## Services
+
+* Storage Account Static Website
+* Azure DNS
+* Azure CDN / Front Door
+* SSL Certificates
+
+## Learn
+
+* Static hosting
+* CDN
+* HTTPS
+* DNS
+
+## Add-ons
+
+* Blob Versioning
+* Lifecycle policies
+* Archive tier
+
+---
+
+# Project 1.2 — Linux Web Server on Azure VM
+
+## Services
+
+* Azure Virtual Machines
+* NSG (Network Security Groups)
+
+## Learn
+
+* Linux administration
+* SSH
+* Web hosting
+
+## Hands-on
+
+* Install Nginx
+* Configure reverse proxy
+* Secure SSH access
+
+---
+
+# Project 1.3 — Azure Identity & Access Management
+
+## Learn
+
+* Azure AD
+* RBAC
+* Managed Identities
+* MFA
+* Least privilege
+
+VERY important in Azure ecosystem.
+
+---
+
+# Project 1.4 — Azure SQL Database Deployment
+
+## Services
+
+* Azure SQL
+* Azure VM
+
+## Learn
+
+* SQL basics
+* Backups
+* Geo-replication
+* Connectivity
+
+---
+
+# Project 1.5 — Python Azure Automation
+
+## Skills
+
+* Python
+* Azure SDK
+
+## Build
+
+* Blob uploader
+* VM automation
+* Backup scripts
+
+---
+
+# STAGE 2 — Networking & Infrastructure
+
+Goal:
+Understand real cloud networking.
+
+---
+
+# Project 2.1 — Custom Virtual Network Architecture
+
+## Services
+
+* VNet
+* Subnets
+* NAT Gateway
+* Route Tables
+* NSGs
+
+## Architecture
+
+```text
+Public Subnet → Web Tier
+Private Subnet → App Tier
+Private Subnet → DB Tier
+```
+
+---
+
+# Project 2.2 — Multi-tier Application Deployment
+
+## Stack
+
+```text
+Front Door/CDN
+→ Application Gateway
+→ Azure VM Scale Sets
+→ Azure SQL
+```
+
+## Learn
+
+* High availability
+* Layered architecture
+* Scaling
+
+---
+
+# Project 2.3 — Application Gateway vs Load Balancer Lab
+
+## Learn
+
+* Layer 7 vs Layer 4
+* HTTP vs TCP
+* WebSockets
+
+---
+
+# Project 2.4 — Azure DNS Advanced Routing
+
+## Learn
+
+* Traffic Manager
+* Failover routing
+* Latency routing
+* Health probes
+
+---
+
+# Project 2.5 — Failure Simulation Lab
+
+## Simulate
+
+* VM crash
+* DB connection failure
+* NSG misconfiguration
+
+## Learn
+
+* Troubleshooting
+* Resilience
+* Debugging
+
+VERY important.
+
+---
+
+# STAGE 3 — Terraform & Infrastructure as Code
+
+Terraform is intentionally introduced EARLY.
+
+---
+
+# Project 3.1 — Terraform Basics
+
+## Learn
+
+* Providers
+* Resources
+* Variables
+* Outputs
+* State
+
+---
+
+# Project 3.2 — Terraform Azure Infrastructure
+
+## Create
+
+```text
+VNet
+Subnets
+VM
+Application Gateway
+Azure SQL
+```
+
+using Terraform only.
+
+---
+
+# Project 3.3 — Terraform Modules & Environments
+
+## Environments
+
+```text
+dev
+qa
+prod
+```
+
+---
+
+# Project 3.4 — Terraform Remote State
+
+## Learn
+
+* Azure Storage backend
+* State locking
+
+VERY important industry topic.
+
+---
+
+# Project 3.5 — Terraform CI/CD Pipeline
+
+## Stack
+
+```text
+GitHub Actions
+→ Terraform Plan
+→ Terraform Apply
+```
+
+---
+
+# STAGE 4 — Serverless & Event-driven Systems
+
+Goal:
+Learn modern Azure architectures.
+
+---
+
+# Project 4.1 — Serverless REST API
+
+## Services
+
+* Azure Functions
+* API Management
+* Cosmos DB
+
+---
+
+# Project 4.2 — API Authentication & Authorization
+
+## Learn
+
+* JWT
+* Azure AD
+* OAuth2
+* RBAC
+
+## Build
+
+```text
+Login API
+→ JWT
+→ Protected Endpoints
+```
+
+VERY important.
+
+---
+
+# Project 4.3 — URL Shortener
+
+## Stack
+
+```text
+API Management
+→ Azure Functions
+→ Cosmos DB
+```
+
+---
+
+# Project 4.4 — Event-driven Image Processing
+
+## Flow
+
+```text
+Blob Upload
+→ Event Grid
+→ Azure Function
+→ Store Output
+```
+
+---
+
+# Project 4.5 — Service Bus Microservices
+
+## Learn
+
+* Queues
+* Dead-letter queues
+* Retries
+* Async processing
+
+---
+
+# Project 4.6 — Durable Functions Workflow
+
+## Flow
+
+```text
+Upload
+→ Validate
+→ Process
+→ Notify
+```
+
+---
+
+# STAGE 5 — Containers & Modern Deployment
+
+Goal:
+Learn production container workflows.
+
+---
+
+# Project 5.1 — Single-service Docker Application
+
+## Learn
+
+* Docker basics
+* Dockerfile
+* Container networking
+
+---
+
+# Project 5.2 — Multi-container Application
+
+## Stack
+
+```text
+Frontend
+Backend
+Database
+Redis
+```
+
+---
+
+# Project 5.3 — Push Containers to ACR
+
+## Services
+
+* Azure Container Registry
+
+---
+
+# Project 5.4 — AKS Deployment
+
+## Stack
+
+```text
+ACR
+→ AKS
+→ Application Gateway
+```
+
+---
+
+# Project 5.5 — Blue-Green Deployment
+
+## Services
+
+* AKS
+* Azure DevOps
+
+---
+
+# Project 5.6 — Azure Container Apps Deployment
+
+---
+
+# Project 5.7 — Redis Caching with Azure Cache for Redis
+
+## Learn
+
+* Caching
+* TTL
+* Performance optimization
+
+---
+
+# STAGE 6 — CI/CD & DevOps
+
+Goal:
+Learn production deployment workflows.
+
+---
+
+# Project 6.1 — GitHub Actions + AKS CI/CD
+
+---
+
+# Project 6.2 — Secure OIDC GitHub Authentication
+
+VERY important.
+
+---
+
+# Project 6.3 — Azure DevOps + Terraform Pipeline
+
+---
+
+# Project 6.4 — Multi-subscription CI/CD Pipeline
+
+---
+
+# Project 6.5 — Kubernetes GitOps with ArgoCD
+
+## Services
+
+* AKS
+* ArgoCD
+
+---
+
+# STAGE 7 — Monitoring, Logging & Observability
+
+Goal:
+Learn production monitoring.
+
+---
+
+# Project 7.1 — Azure Monitor Monitoring System
+
+---
+
+# Project 7.2 — Centralized Logging Platform
+
+## Stack
+
+```text
+Azure Monitor
++ Log Analytics
++ Grafana
+```
+
+---
+
+# Project 7.3 — Application Insights Distributed Tracing
+
+---
+
+# Project 7.4 — Log Analytics Query Lab
+
+## Query
+
+* NSG Flow Logs
+* Activity Logs
+* App logs
+
+---
+
+# Project 7.5 — Grafana + Prometheus Monitoring
+
+VERY important modern stack.
+
+---
+
+# STAGE 8 — Security & Governance
+
+Goal:
+Learn enterprise cloud security.
+
+---
+
+# Project 8.1 — Key Vault Integration
+
+---
+
+# Project 8.2 — WAF Application Protection
+
+## Protect Against
+
+* SQL injection
+* XSS
+* Bots
+
+---
+
+# Project 8.3 — Azure Policy Compliance Automation
+
+---
+
+# Project 8.4 — Microsoft Defender for Cloud
+
+---
+
+# Project 8.5 — Sentinel SIEM Integration
+
+VERY important for enterprise security.
+
+---
+
+# Project 8.6 — Zero Trust Security Lab
+
+Advanced project.
+
+---
+
+# STAGE 9 — Data Engineering & Analytics
+
+Very important for your direction.
+
+---
+
+# Project 9.1 — Data Lake Architecture
+
+## Stack
+
+```text
+ADLS Gen2
+→ Purview
+→ Synapse
+→ Databricks
+```
+
+---
+
+# Project 9.2 — Azure Data Factory ETL Pipeline
+
+## Flow
+
+```text
+Raw Data
+→ Data Factory
+→ Processed Data
+→ Synapse
+```
+
+---
+
+# Project 9.3 — Real-time Streaming Pipeline
+
+## Stack
+
+```text
+Producer
+→ Event Hubs
+→ Stream Analytics
+→ ADLS/Synapse
+```
+
+---
+
+# Project 9.4 — Spark Processing on Databricks
+
+VERY important for modern DE roles.
+
+---
+
+# Project 9.5 — Airflow Data Orchestration
+
+## Services
+
+* Apache Airflow
+* Azure Data Factory
+
+---
+
+# Project 9.6 — dbt Transformation Pipeline
+
+VERY important modern DE skill.
+
+---
+
+# Project 9.7 — Data Quality Validation
+
+## Tools
+
+* Great Expectations
+* Soda
+
+---
+
+# Project 9.8 — Schema Evolution & Partitioning
+
+## Learn
+
+* Delta Lake
+* Partition pruning
+* Parquet optimization
+
+---
+
+# Project 9.9 — Synapse Data Warehouse
+
+---
+
+# STAGE 10 — Advanced Cloud Architecture
+
+Goal:
+Production-grade engineering.
+
+---
+
+# Project 10.1 — Multi-subscription Azure Landing Zone
+
+## Learn
+
+* Management Groups
+* Policies
+* RBAC
+* Enterprise Governance
+
+---
+
+# Project 10.2 — Disaster Recovery Architecture
+
+## Features
+
+* Geo-replication
+* Failover groups
+* Backup recovery
+
+---
+
+# Project 10.3 — Cost Optimization Automation
+
+## Learn
+
+* Idle resource cleanup
+* Rightsizing
+* Storage optimization
+
+---
+
+# Project 10.4 — Kubernetes on AKS
+
+## Learn
+
+* Pods
+* Services
+* Ingress
+* HPA
+
+---
+
+# Project 10.5 — Production-grade Microservices Platform
+
+## Stack
+
+```text
+AKS
++ API Management
++ Event Hubs
++ Redis
++ Azure SQL
++ Monitoring
++ Security
+```
+
+---
+
+# MOST IMPORTANT PROJECTS FOR JOB READINESS
+
+If time is limited, prioritize these:
+
+1. Multi-tier VNet application
+2. Terraform infrastructure
+3. AKS deployment
+4. CI/CD pipeline
+5. Monitoring stack
+6. Data lake architecture
+7. Data Factory ETL pipeline
+8. Event Hubs streaming
+9. Security automation
+10. Cost optimization
+
+These provide the highest real-world value.
+
+---
+
+# BEST LEARNING STRATEGY
+
+For EVERY project:
+
+## Version 1
+
+Azure Portal
+
+## Version 2
+
+Azure CLI
+
+## Version 3
+
+Terraform
+
+## Version 4
+
+CI/CD Automated
+
+## Version 5
+
+Add Monitoring + Security
+
+---
+
+# Your Ideal Final Stack
+
+For your direction:
+
+```text
+Azure
++ Terraform
++ Docker
++ Python
++ Spark
++ Airflow
++ dbt
++ Event Hubs
++ Monitoring
++ Security
+```
+
+This is an extremely strong modern engineering stack.

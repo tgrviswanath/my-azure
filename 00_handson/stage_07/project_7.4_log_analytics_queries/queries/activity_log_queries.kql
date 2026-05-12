@@ -1,0 +1,50 @@
+// ── Activity Log KQL Queries ──────────────────────────────────────────────────
+// Run in: Azure Portal → Log Analytics → Logs
+
+// 1. Top 10 operations in last 24 hours
+AzureActivity
+| where TimeGenerated > ago(24h)
+| summarize count() by OperationNameValue
+| top 10 by count_
+| render barchart
+
+// 2. Failed operations
+AzureActivity
+| where TimeGenerated > ago(7d)
+| where ActivityStatusValue == "Failure"
+| project TimeGenerated, Caller, OperationNameValue, ResourceGroup, Properties
+| order by TimeGenerated desc
+
+// 3. Role assignment changes (security audit)
+AzureActivity
+| where TimeGenerated > ago(30d)
+| where OperationNameValue contains "roleAssignments"
+| project TimeGenerated, Caller, OperationNameValue, ResourceGroup, Properties
+| order by TimeGenerated desc
+
+// 4. Resource deletions
+AzureActivity
+| where TimeGenerated > ago(7d)
+| where OperationNameValue endswith "/delete"
+| where ActivityStatusValue == "Success"
+| project TimeGenerated, Caller, OperationNameValue, ResourceGroup
+| order by TimeGenerated desc
+
+// 5. Activity by caller (who is doing what)
+AzureActivity
+| where TimeGenerated > ago(24h)
+| summarize OperationCount = count() by Caller, ActivityStatusValue
+| order by OperationCount desc
+
+// 6. Hourly activity trend
+AzureActivity
+| where TimeGenerated > ago(7d)
+| summarize count() by bin(TimeGenerated, 1h), ActivityStatusValue
+| render timechart
+
+// 7. Suspicious: operations from unusual locations
+AzureActivity
+| where TimeGenerated > ago(24h)
+| where isnotempty(CallerIpAddress)
+| summarize count() by CallerIpAddress, Caller
+| order by count_ desc

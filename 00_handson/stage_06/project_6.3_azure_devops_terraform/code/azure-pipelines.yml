@@ -1,0 +1,127 @@
+# azure-pipelines.yml — Terraform CI/CD Pipeline for Azure DevOps
+# Stages: Validate → Plan → Approve (prod) → Apply
+
+trigger:
+  branches:
+    include: [main]
+
+pr:
+  branches:
+    include: [main]
+
+variables:
+  TF_DIR: 'terraform'
+  TF_VERSION: '1.7.0'
+  BACKEND_RG: 'rg-terraform-state'
+  BACKEND_SA: 'tfstateado001'
+  BACKEND_CONTAINER: 'tfstate'
+  BACKEND_KEY: 'stage-06/project-6.3/terraform.tfstate'
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+stages:
+
+# ── Stage 1: Validate ──────────────────────────────────────────────────────────
+- stage: Validate
+  displayName: 'Validate Terraform'
+  jobs:
+  - job: validate
+    steps:
+    - task: TerraformInstaller@1
+      inputs:
+        terraformVersion: $(TF_VERSION)
+
+    - task: TerraformTaskV4@4
+      displayName: 'terraform init'
+      inputs:
+        provider: 'azurerm'
+        command: 'init'
+        workingDirectory: $(TF_DIR)
+        backendServiceArm: 'azure-service-connection'
+        backendAzureRmResourceGroupName: $(BACKEND_RG)
+        backendAzureRmStorageAccountName: $(BACKEND_SA)
+        backendAzureRmContainerName: $(BACKEND_CONTAINER)
+        backendAzureRmKey: $(BACKEND_KEY)
+
+    - script: |
+        cd $(TF_DIR)
+        terraform fmt -check -recursive
+        terraform validate
+      displayName: 'fmt + validate'
+
+# ── Stage 2: Plan ──────────────────────────────────────────────────────────────
+- stage: Plan
+  displayName: 'Terraform Plan'
+  dependsOn: Validate
+  jobs:
+  - job: plan
+    steps:
+    - task: TerraformInstaller@1
+      inputs:
+        terraformVersion: $(TF_VERSION)
+
+    - task: TerraformTaskV4@4
+      displayName: 'terraform init'
+      inputs:
+        provider: 'azurerm'
+        command: 'init'
+        workingDirectory: $(TF_DIR)
+        backendServiceArm: 'azure-service-connection'
+        backendAzureRmResourceGroupName: $(BACKEND_RG)
+        backendAzureRmStorageAccountName: $(BACKEND_SA)
+        backendAzureRmContainerName: $(BACKEND_CONTAINER)
+        backendAzureRmKey: $(BACKEND_KEY)
+
+    - task: TerraformTaskV4@4
+      displayName: 'terraform plan'
+      inputs:
+        provider: 'azurerm'
+        command: 'plan'
+        workingDirectory: $(TF_DIR)
+        environmentServiceNameAzureRM: 'azure-service-connection'
+        commandOptions: '-out=plan.tfplan'
+
+    - publish: $(TF_DIR)/plan.tfplan
+      artifact: terraform-plan
+      displayName: 'Publish plan artifact'
+
+# ── Stage 3: Apply (main branch only, with approval) ──────────────────────────
+- stage: Apply
+  displayName: 'Terraform Apply'
+  dependsOn: Plan
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  jobs:
+  - deployment: apply
+    environment: 'production'   # Configure approval in ADO Environments
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: TerraformInstaller@1
+            inputs:
+              terraformVersion: $(TF_VERSION)
+
+          - download: current
+            artifact: terraform-plan
+
+          - task: TerraformTaskV4@4
+            displayName: 'terraform init'
+            inputs:
+              provider: 'azurerm'
+              command: 'init'
+              workingDirectory: $(TF_DIR)
+              backendServiceArm: 'azure-service-connection'
+              backendAzureRmResourceGroupName: $(BACKEND_RG)
+              backendAzureRmStorageAccountName: $(BACKEND_SA)
+              backendAzureRmContainerName: $(BACKEND_CONTAINER)
+              backendAzureRmKey: $(BACKEND_KEY)
+
+          - task: TerraformTaskV4@4
+            displayName: 'terraform apply'
+            inputs:
+              provider: 'azurerm'
+              command: 'apply'
+              workingDirectory: $(TF_DIR)
+              environmentServiceNameAzureRM: 'azure-service-connection'
+              commandOptions: '$(Pipeline.Workspace)/terraform-plan/plan.tfplan'

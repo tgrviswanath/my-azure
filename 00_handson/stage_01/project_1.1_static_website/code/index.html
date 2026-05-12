@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Azure Static Website Lab</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #0078d4 0%, #005a9e 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            padding: 48px 40px;
+            margin-bottom: 24px;
+        }
+
+        .azure-logo {
+            font-size: 64px;
+            margin-bottom: 16px;
+        }
+
+        h1 {
+            font-size: 2.4rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.85;
+            margin-bottom: 32px;
+        }
+
+        .services {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .service-badge {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            padding: 16px 12px;
+            font-size: 0.9rem;
+        }
+
+        .service-badge .icon { font-size: 1.8rem; margin-bottom: 8px; }
+        .service-badge .name { font-weight: 600; }
+        .service-badge .desc { opacity: 0.75; font-size: 0.8rem; margin-top: 4px; }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            text-align: left;
+        }
+
+        .info-item {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 12px 16px;
+        }
+
+        .info-item .label {
+            font-size: 0.75rem;
+            opacity: 0.7;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .info-item .value {
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-top: 4px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .footer {
+            opacity: 0.6;
+            font-size: 0.85rem;
+        }
+
+        @media (max-width: 500px) {
+            h1 { font-size: 1.8rem; }
+            .info-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="azure-logo">☁️</div>
+            <h1>Azure Static Website Lab</h1>
+            <p class="subtitle">Project 1.1 — Hosted on Azure Blob Storage + CDN</p>
+
+            <div class="services">
+                <div class="service-badge">
+                    <div class="icon">🗄️</div>
+                    <div class="name">Azure Storage</div>
+                    <div class="desc">$web container hosting</div>
+                </div>
+                <div class="service-badge">
+                    <div class="icon">🌐</div>
+                    <div class="name">Azure CDN</div>
+                    <div class="desc">Global edge caching</div>
+                </div>
+                <div class="service-badge">
+                    <div class="icon">🔒</div>
+                    <div class="name">HTTPS</div>
+                    <div class="desc">Free managed certificate</div>
+                </div>
+                <div class="service-badge">
+                    <div class="icon">⚡</div>
+                    <div class="name">Terraform</div>
+                    <div class="desc">Infrastructure as code</div>
+                </div>
+            </div>
+
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="label">Hosting</div>
+                    <div class="value">Azure Blob Storage</div>
+                </div>
+                <div class="info-item">
+                    <div class="label">CDN</div>
+                    <div class="value">Azure CDN (Microsoft)</div>
+                </div>
+                <div class="info-item">
+                    <div class="label">Replication</div>
+                    <div class="value">LRS (Locally Redundant)</div>
+                </div>
+                <div class="info-item">
+                    <div class="label">Monthly Cost</div>
+                    <div class="value">~$1.87/month</div>
+                </div>
+            </div>
+        </div>
+
+        <p class="footer">
+            Deployed with Azure CLI + Terraform &nbsp;|&nbsp;
+            <span id="deploy-time"></span>
+        </p>
+    </div>
+
+    <script>
+        document.getElementById('deploy-time').textContent =
+            'Loaded: ' + new Date().toLocaleString();
+    </script>
+</body>
+</html>

@@ -1,0 +1,92 @@
+name: Terraform Apply
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "terraform/**"
+      - ".github/workflows/terraform-apply.yml"
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Type 'apply' to confirm manual apply"
+        required: true
+        default: ""
+
+# Prevent concurrent applies
+concurrency:
+  group: terraform-apply
+  cancel-in-progress: false  # Don't cancel in-progress applies
+
+permissions:
+  contents: read
+  id-token: write  # Required for OIDC authentication (optional)
+
+jobs:
+  terraform-apply:
+    name: Terraform Apply
+    runs-on: ubuntu-latest
+
+    # Optional: require manual approval for prod
+    # environment: production
+
+    env:
+      ARM_CLIENT_ID:       ${{ secrets.AZURE_CLIENT_ID }}
+      ARM_CLIENT_SECRET:   ${{ secrets.AZURE_CLIENT_SECRET }}
+      ARM_TENANT_ID:       ${{ secrets.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      TF_STATE_STORAGE:    ${{ secrets.TF_STATE_STORAGE_ACCOUNT }}
+
+    defaults:
+      run:
+        working-directory: terraform/
+
+    steps:
+      - name: Validate manual trigger
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          if [ "${{ github.event.inputs.confirm }}" != "apply" ]; then
+            echo "Manual trigger requires confirm='apply'. Got: '${{ github.event.inputs.confirm }}'"
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~1.7"
+
+      - name: Terraform Init
+        run: |
+          terraform init \
+            -backend-config="storage_account_name=$TF_STATE_STORAGE" \
+            -backend-config="resource_group_name=rg-tfstate" \
+            -backend-config="container_name=tfstate" \
+            -backend-config="key=project-3.5/terraform.tfstate"
+
+      - name: Terraform Validate
+        run: terraform validate -no-color
+
+      - name: Terraform Plan
+        run: terraform plan -no-color -out=tfplan
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve tfplan
+
+      - name: Terraform Output
+        run: terraform output -no-color
+
+      - name: Post Apply Summary
+        if: always()
+        run: |
+          echo "## Terraform Apply Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status:** ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Outputs" >> $GITHUB_STEP_SUMMARY
+          terraform output -no-color >> $GITHUB_STEP_SUMMARY 2>/dev/null || echo "No outputs" >> $GITHUB_STEP_SUMMARY

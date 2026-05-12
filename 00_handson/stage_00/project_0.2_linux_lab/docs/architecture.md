@@ -1,0 +1,77 @@
+# Architecture — Project 0.2 Linux Lab on Azure VM
+
+## Diagram
+
+```
+  Your Local Machine
+  ┌──────────────────┐
+  │  Terminal / SSH  │
+  │  Azure CLI       │
+  │  Terraform       │
+  └────────┬─────────┘
+           │ SSH :22 / HTTP :80
+           │
+           ▼
+  ┌─────────────────────────────────────────────────────┐
+  │                  Azure (East US)                     │
+  │                                                      │
+  │  ┌──────────────────────────────────────────────┐   │
+  │  │         Resource Group: azure-linux-lab-rg   │   │
+  │  │                                              │   │
+  │  │  ┌──────────────────────────────────────┐   │   │
+  │  │  │   Virtual Network: 10.0.0.0/16       │   │   │
+  │  │  │                                      │   │   │
+  │  │  │  ┌────────────────────────────────┐  │   │   │
+  │  │  │  │  Subnet: 10.0.1.0/24          │  │   │   │
+  │  │  │  │                               │  │   │   │
+  │  │  │  │  ┌──────────────────────────┐ │  │   │   │
+  │  │  │  │  │  NSG Rules:              │ │  │   │   │
+  │  │  │  │  │  ✅ Allow SSH  :22       │ │  │   │   │
+  │  │  │  │  │  ✅ Allow HTTP :80       │ │  │   │   │
+  │  │  │  │  │  ❌ Deny all others      │ │  │   │   │
+  │  │  │  │  └──────────────────────────┘ │  │   │   │
+  │  │  │  │                               │  │   │   │
+  │  │  │  │  ┌──────────────────────────┐ │  │   │   │
+  │  │  │  │  │  Azure VM (B1s)          │ │  │   │   │
+  │  │  │  │  │  Ubuntu 22.04 LTS        │ │  │   │   │
+  │  │  │  │  │                          │ │  │   │   │
+  │  │  │  │  │  ┌────────────────────┐  │ │  │   │   │
+  │  │  │  │  │  │  Nginx Web Server  │  │ │  │   │   │
+  │  │  │  │  │  │  :80 → /var/www    │  │ │  │   │   │
+  │  │  │  │  │  └────────────────────┘  │ │  │   │   │
+  │  │  │  │  │                          │ │  │   │   │
+  │  │  │  │  │  Public IP: x.x.x.x      │ │  │   │   │
+  │  │  │  │  └──────────────────────────┘ │  │   │   │
+  │  │  │  └────────────────────────────┘  │   │   │
+  │  │  └──────────────────────────────────┘   │   │
+  │  └──────────────────────────────────────────┘   │
+  └─────────────────────────────────────────────────┘
+```
+
+## Key Concepts
+
+| Concept | Explanation |
+|---------|-------------|
+| NSG (Network Security Group) | Azure's stateful firewall — rules apply to inbound/outbound traffic |
+| B1s VM | 1 vCPU, 1 GB RAM — cheapest general-purpose VM, good for learning |
+| Public IP | Static IP assigned to the VM's NIC for external access |
+| Virtual Network | Isolated Layer 3 network in Azure — like a VPC in AWS |
+| Subnet | Subdivision of the VNet — VMs are placed in subnets |
+| cloud-init | First-boot automation via `custom_data` in Terraform |
+| Managed Disk | Azure-managed OS disk — Standard HDD is cheapest option |
+
+## SSH Connection Flow
+```
+Local Terminal
+    │
+    │  SSH (port 22, RSA key auth)
+    ▼
+Azure Public IP
+    │
+    │  NSG allows port 22
+    ▼
+VM NIC (private IP: 10.0.1.4)
+    │
+    ▼
+Ubuntu 22.04 — sshd listening on :22
+```

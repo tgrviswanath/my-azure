@@ -1,0 +1,51 @@
+// ── NSG Flow Log KQL Queries ──────────────────────────────────────────────────
+// Table: AzureNetworkAnalytics_CL (requires Traffic Analytics enabled)
+// Or use: NetworkMonitoring table
+
+// 1. Top source IPs by traffic volume
+AzureNetworkAnalytics_CL
+| where TimeGenerated > ago(1h)
+| where SubType_s == "FlowLog"
+| summarize TotalBytes = sum(BytesSentD_d + BytesReceivedD_d) by SrcIP_s
+| top 10 by TotalBytes
+| render barchart
+
+// 2. Blocked traffic (denied flows)
+AzureNetworkAnalytics_CL
+| where TimeGenerated > ago(1h)
+| where SubType_s == "FlowLog"
+| where FlowStatus_s == "D"  // D = Denied
+| project TimeGenerated, SrcIP_s, DestIP_s, DestPort_d, L4Protocol_s, NSGName_s
+| order by TimeGenerated desc
+
+// 3. Port scan detection (many ports from single source)
+AzureNetworkAnalytics_CL
+| where TimeGenerated > ago(1h)
+| where SubType_s == "FlowLog"
+| summarize DistinctPorts = dcount(DestPort_d) by SrcIP_s
+| where DistinctPorts > 20
+| order by DistinctPorts desc
+
+// 4. Top destination ports
+AzureNetworkAnalytics_CL
+| where TimeGenerated > ago(24h)
+| where SubType_s == "FlowLog"
+| summarize count() by DestPort_d, L4Protocol_s
+| top 20 by count_
+
+// 5. Traffic between subnets
+AzureNetworkAnalytics_CL
+| where TimeGenerated > ago(1h)
+| where SubType_s == "FlowLog"
+| summarize Flows = count() by SrcSubnet_s, DestSubnet_s
+| order by Flows desc
+
+// 6. Inbound vs outbound traffic
+AzureNetworkAnalytics_CL
+| where TimeGenerated > ago(24h)
+| where SubType_s == "FlowLog"
+| summarize
+    InboundBytes  = sumif(BytesReceivedD_d, FlowDirection_s == "I"),
+    OutboundBytes = sumif(BytesSentD_d, FlowDirection_s == "O")
+  by bin(TimeGenerated, 1h)
+| render timechart
